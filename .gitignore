@@ -8,6 +8,9 @@ env/
 .DS_Store
 .ipynb_checkpoints/
 
+# output artifacts
+output/
+
 # uploaded or sample media
 *.mp4
 *.mov
