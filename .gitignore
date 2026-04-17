@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.env
+.DS_Store
+.ipynb_checkpoints/
+
+# uploaded or sample media
+*.mp4
+*.mov
+*.m4v
+*.avi
