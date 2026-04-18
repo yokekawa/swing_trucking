@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Optional
 
 import cv2
-import mediapipe as mp
+import mediapipe.python.solutions.pose as _POSE  # noqa: N812 (submodule import ensures solutions is loaded)
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -47,7 +47,6 @@ SMOOTH_WINDOW = 5           # frames; moving-average window on tip coords
 MIN_CONF = 0.15             # confidence floor for rendering
 POSE_MIN_DETECTION = 0.5
 
-_POSE = mp.solutions.pose
 _LEFT_WRIST = _POSE.PoseLandmark.LEFT_WRIST.value
 _RIGHT_WRIST = _POSE.PoseLandmark.RIGHT_WRIST.value
 
