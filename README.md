@@ -1,25 +1,55 @@
 # bat_swing_analyzer
 
 動画からバットの芯（先端）が通った軌跡を検出し、1 枚の PNG に重ね描きで
-可視化する CLI ツール。MVP として、画像処理ベースでバットを直接検出する
-v2 パイプラインのみを実装しています（v1: 手首からの推定は未実装）。
+可視化する CLI ツール。
 
-- バットにマーカーやシールは貼らない。画像から直接検出する。
-- 3D 復元はしない。2D 軌道のみ。
-- 検出の信頼度を「線の太さ・透明度」にマッピングして、悪条件でも
-  「太く曖昧に」軌跡を出す方針。
+- **v3 (推奨)**: ユーザーが GUI でスイング区間と追跡点 (バットの芯など) を
+  指定し、Lucas-Kanade オプティカルフローで点を追跡。撮影条件に強い
+- **v2**: 完全自動。画像処理 (MediaPipe Pose + 動体検出 + 輪郭抽出) で
+  バットを直接検出。背景がシンプルで明るい動画向け
+- v1 (手首からの推定) は未実装
+
+共通方針:
+- バットにマーカーやシールは貼らない
+- 3D 復元はしない。2D 軌道のみ
+- 検出/追跡の信頼度を「線の太さ・透明度」にマッピングして表現
 
 ## セットアップ
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate     # Windows Git Bash: source .venv/Scripts/activate
 pip install -r requirements.txt
 ```
 
-Python 3.10 以降を推奨。
+Python 3.10〜3.12 を推奨（mediapipe 0.10.14 のホイールがある範囲）。
 
-## 使い方
+## 使い方 (v3 推奨)
+
+```bash
+python src/analyze_swing_v3.py INPUT.mp4 -o output/trajectory.png
+```
+
+実行すると 2 つの GUI ウィンドウが順に開きます。
+
+1. **スイング区間の選択**
+   - スライダーをドラッグして動画を移動
+   - スイング開始フレームで `s` キー
+   - スイング終了フレームで `e` キー
+   - `Enter` で確定 / `q` で中止
+2. **追跡点の指定**
+   - 開始フレームが表示されるので、追跡したい点 (バットの芯など) を **クリック**
+   - クリックし直すと位置を変更できる
+   - `Enter` で確定 / `q` で中止
+
+GUI を使わず CLI 引数だけで実行する場合:
+
+```bash
+python src/analyze_swing_v3.py INPUT.mp4 -o output/trajectory.png \
+    --start-sec 1.2 --end-sec 2.4 --seed-x 640 --seed-y 320
+```
+
+## 使い方 (v2: 完全自動)
 
 ```bash
 python src/analyze_swing_v2.py INPUT.mp4 -o output/trajectory.png
@@ -30,6 +60,17 @@ python src/analyze_swing_v2.py INPUT.mp4 -o output/trajectory.png
 
 実行後、コンソールに検出率が表示されます。`raw_detections` が総フレームの
 6〜7 割を超えれば実用ラインの目安です。
+
+## パイプライン (v3)
+
+1. ユーザーが GUI で **スイング区間** (start, end フレーム) を指定
+2. ユーザーが GUI で **追跡点** (バットの芯など) を 1 点クリック
+3. 開始フレームから終了フレームまで **Lucas-Kanade ピラミッド光学フロー** で
+   その点を追跡 (`cv2.calcOpticalFlowPyrLK`, `maxLevel=4`, `winSize=31x31`)
+4. **forward-backward error** で各フレームの信頼度を算出
+   - FB 誤差 ≤ 1.5 px → 信頼度 1.0、≥ 8.0 px → 0.0、その間は線形
+5. 移動平均 (`SMOOTH_WINDOW=3`) で軌跡をスムージング
+6. 信頼度 → 線の太さと α にマッピングして PNG に描画
 
 ## パイプライン (v2)
 
