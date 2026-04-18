@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Optional
 
 import cv2
-import mediapipe.python.solutions.pose as _POSE  # noqa: N812 (submodule import ensures solutions is loaded)
+import mediapipe.solutions.pose as _POSE  # noqa: N812 (submodule import ensures solutions is loaded)
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
