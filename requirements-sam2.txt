@@ -1,0 +1,11 @@
+# Optional dependencies for v5 (SAM2 automatic bat tracking).
+# Install on top of requirements.txt when you want v5.
+#
+#   pip install -r requirements-sam2.txt
+#
+# CUDA wheels for torch give a big speedup on NVIDIA GPUs. See
+#   https://pytorch.org/get-started/locally/
+# for the correct index-url. CPU-only torch is fine but slow.
+torch>=2.0
+torchvision
+sam2 @ git+https://github.com/facebookresearch/sam2.git

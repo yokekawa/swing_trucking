@@ -3,6 +3,9 @@
 動画からバットの芯（先端）が通った軌跡を検出し、1 枚の PNG に重ね描きで
 可視化する CLI ツール。
 
+- **v5 (実験的・AI 自動追跡)**: SAM2 (Meta Segment Anything 2) で 1 点クリックから
+  動画全体のバット領域を自動セグメント + 追跡。精度は高いが torch + SAM2 の
+  インストールと重いモデルが必要
 - **v4 (推奨・暗所/ブラーに強い)**: ユーザーがスイング区間内の数フレームで
   バット先端をクリック。スプライン補間で滑らかな軌跡を生成し、背景は
   クリックしたフレームを半透明で重ね合わせた合成画像。追従できているかが
@@ -28,10 +31,38 @@ pip install -r requirements.txt
 
 Python 3.10〜3.12 を推奨（mediapipe 0.10.14 のホイールがある範囲）。
 
-## 使い方 (v4 推奨)
+## 使い方 (v5: SAM2 自動追跡, 実験的)
+
+**追加インストール** (初回のみ):
 
 ```bash
-python src/analyze_swing_v4.py INPUT.mp4 -o output/trajectory.png
+pip install -r requirements-sam2.txt
+```
+
+`torch` が数百 MB、SAM2 も数十 MB あるので時間がかかります。NVIDIA GPU がある場合は
+[PyTorch 公式](https://pytorch.org/get-started/locally/) から CUDA 版 torch を入れると
+大幅に高速化します。
+
+**実行:**
+
+```bash
+python src/analyze_swing_v5.py INPUT.mp4 -o output/trajectory_v5.png
+```
+
+1. スイング区間をスクラブで選択 (`s`/`e`/`Enter`)
+2. 開始フレームでバット先端を **1 点クリック** → `Enter`
+3. 初回のみ、SAM2 tiny チェックポイント (~40 MB) が自動ダウンロード
+4. 各フレームのバット領域をセグメントし、長軸の端点を追跡 → PNG 出力
+
+**注意:**
+- CPU 実行の場合、1 フレーム数秒かかるため 300 フレームで 10〜20 分が目安
+- GPU (CUDA) だと秒速で終わります
+- より精度が欲しい場合は `--model small` / `--model base_plus` を指定
+
+## 使い方 (v4)
+
+```bash
+python src/analyze_swing_v4.py INPUT.mp4 -o output/trajectory_v4.png
 ```
 
 1. **スイング区間の選択** — スライダーをドラッグ、`s`=開始、`e`=終了、`Enter`=確定
@@ -97,6 +128,18 @@ python src/analyze_swing_v2.py INPUT.mp4 -o output/trajectory.png
 
 実行後、コンソールに検出率が表示されます。`raw_detections` が総フレームの
 6〜7 割を超えれば実用ラインの目安です。
+
+## パイプライン (v5)
+
+1. ユーザーが GUI で **スイング区間** とバット先端の **1 点** を指定
+2. 区間のフレームを一時ディレクトリへ JPG で書き出し
+3. `sam2.build_sam.build_sam2_video_predictor` でモデルをロード
+4. `predictor.init_state(video_path=dir)` で初期化
+5. `predictor.add_new_points_or_box(..., points=[[x, y]], labels=[1])` でシード登録
+6. `predictor.propagate_in_video(state)` で全フレームを伝播 → 各フレームのマスク
+7. 各マスクに `cv2.minAreaRect` を当て、長軸の 2 端点のうち直前フレームの先端位置に
+   近い方を選んで軌跡点に採用
+8. 処理した全フレームを半透明合成した背景 + 軌跡で PNG 出力
 
 ## パイプライン (v4)
 

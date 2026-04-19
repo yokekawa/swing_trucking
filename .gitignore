@@ -11,6 +11,9 @@ env/
 # output artifacts
 output/
 
+# SAM2 model checkpoints (auto-downloaded; >= 40 MB)
+models/
+
 # uploaded or sample media
 *.mp4
 *.mov
